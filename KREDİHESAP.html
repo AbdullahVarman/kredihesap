@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kredi Hesaplama Tablosu</title>
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 10px;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        input, select {
+            width: 100%;
+            padding: 6px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #145e9b;
+            color: white;
+            padding: 8px;
+            width: 100%;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        h1 {
+            font-size: 36px;
+            margin: 10px 0;
+            color: #145e9b; /* Butonla uyumlu bir renk */
+        }
+	h2 {
+            font-size: 20px;
+            color: red;
+            margin: 20px 0;
+        }
+        h3, p {
+            font-size: 16px;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 5px;
+            }
+            .container {
+                padding: 5px;
+            }
+            input, select, button {
+                font-size: 14px;
+                padding: 5px;
+            }
+            table {
+                font-size: 12px;
+            }
+            th, td {
+                padding: 4px;
+            }
+            h1 {
+                font-size: 24px; /* Mobil için küçült */
+            }
+            h3, p {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>NİKFER EKK</h1>
+	<h2>TUTARLARDA DEĞİŞİKLİK GERÇEKLEŞEBİLİR</h2>
+        <h3 id="banka-title">Kredi Hesaplama Tablosu</h3>
+        <label>Kredi Tutarı</label>
+        <input type="number" id="kredi" placeholder="Kredi Tutarı" required>
+        
+        <label>Kredi Türü</label>
+        <select id="kredi-turu" required>
+            <option value="isletme-k">İşletme</option>
+            <option value="arac-k">Araç Alımı (Yatırım)</option>
+            <option value="isyeri-k">İşyeri Alımı (Yatırım)</option>
+        </select>
+        
+        <label>Vade</label>
+        <select id="vade" required>
+            <option value="36">3 Yıl (36 Ay)</option>
+            <option value="48">4 Yıl (48 Ay)</option>
+        </select>
+        
+        <label>Periyot</label>
+        <select id="periyot" required>
+            <option value="3">3 Ay</option>
+            <option value="6">6 Ay</option>
+        </select>
+        
+        <label>Faiz Oranı (%)</label>
+        <input type="number" id="faiz" value="25" readonly>
+        
+        <button type="button" onclick="hesaplaKredi()">Hesapla</button>
+        
+        <h3>Ödeme Planı</h3>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dönem</th>
+                        <th>Anapara (₺)</th>
+                        <th>Faiz (₺)</th>
+                        <th>Masraf (₺)</th>
+                        <th>B. Komisyon (₺)</th>
+                        <th>Taksit Tutarı (₺)</th>
+                        <th>Kalan Anapara (₺)</th>
+                    </tr>
+                </thead>
+                <tbody id="sonucTablo"></tbody>
+            </table>
+        </div>
+        
+        <h3>Toplam Ödeme</h3>
+        <p><strong>Toplam Faiz:</strong> <span id="toplamFaiz">0</span> ₺</p>
+        <p><strong>Toplam Masraf:</strong> <span id="toplamMasraf">0</span> ₺</p>
+        <p><strong>Toplam Komisyon:</strong> <span id="toplamKomisyon">0</span> ₺</p>
+        <p><strong>Toplam Ödeme:</strong> <span id="toplamOdeme">0</span> ₺</p>
+    </div>
+
+    <script>
+        function hesaplaKredi() {
+            let kredi = parseFloat(document.getElementById("kredi").value) || 0;
+            const faiz = 25.69 / 100; // Hesaplamada %25.69 kullanılacak
+            let vade = parseInt(document.getElementById("vade").value) || 0;
+            let periyot = parseInt(document.getElementById("periyot").value) || 0;
+            
+            if (kredi <= 0 || vade <= 0 || periyot <= 0) {
+                alert("Lütfen tüm alanları doğru giriniz!");
+                return;
+            }
+            
+            let toplamPeriyot = Math.floor(vade / periyot);
+            let periyotFaiz = faiz * (periyot / 12);
+            let anaparaOdeme = kredi / toplamPeriyot;
+            let toplamFaiz = 0;
+            let toplamOdeme = 0;
+            let toplamKomisyon = 0;
+            let toplamMasraf = 0;
+            
+            let tablo = document.getElementById("sonucTablo");
+            tablo.innerHTML = "";
+            
+            let kalanBorc = kredi;
+            let taksitPerYil = 12 / periyot; // Bir yıldaki taksit sayısı
+            
+            for (let i = 1; i <= toplamPeriyot; i++) {
+                let faizTutari = kalanBorc * periyotFaiz;
+                let komisyon;
+                let masraf = 0; // Varsayılan olarak masraf 0
+
+                // Yıla göre oransal banka komisyonları ve masraflar
+                let yil = Math.ceil(i * periyot / 12); // Hangi yılda olduğumuzu hesapla
+                if (vade === 48 && periyot === 6) {
+                    // 4 yıl vade ve 6 aylık periyot için özel oranlar
+                    if (yil === 1) {
+                        komisyon = (kredi * 0.01) / taksitPerYil; // %1
+                    } else if (yil === 2) {
+                        komisyon = (kredi * 0.0075) / taksitPerYil; // %0.75
+                    } else if (yil === 3) {
+                        komisyon = (kredi * 0.005) / taksitPerYil; // %0.5
+                    } else if (yil === 4) {
+                        komisyon = (kredi * 0.0025) / taksitPerYil; // %0.25
+                    } else {
+                        komisyon = 0; // 5. yıl ve sonrası
+                    }
+                    // Masraf hesaplama (4 yıl vade ve 6 aylık periyot için)
+                    if (yil === 1) {
+                        masraf = (kredi * 0) / taksitPerYil; // %0
+                    } else if (yil === 2) {
+                        masraf = (kredi * 0.01125) / taksitPerYil; // %1.125
+                    } else if (yil === 3) {
+                        masraf = (kredi * 0.0075) / taksitPerYil; // %0.75
+                    } else if (yil === 4) {
+                        masraf = (kredi * 0.00375) / taksitPerYil; // %0.375
+                    } else {
+                        masraf = 0; // 5. yıl ve sonrası
+                    }
+                } else if (vade === 36 && periyot === 6) {
+                    // 3 yıl vade ve 6 aylık periyot için özel oranlar
+                    if (yil === 1) {
+                        komisyon = (kredi * 0.01) / taksitPerYil; // %1
+                    } else if (yil === 2) {
+                        komisyon = (kredi * 0.0066666) / taksitPerYil; // %0.66666
+                    } else if (yil === 3) {
+                        komisyon = (kredi * 0.00333334) / taksitPerYil; // %0.333334
+                    } else {
+                        komisyon = 0; // 4. yıl ve sonrası
+                    }
+                    // Masraf hesaplama (3 yıl vade ve 6 aylık periyot için)
+                    if (yil === 1) {
+                        masraf = (kredi * 0) / taksitPerYil; // %0
+                    } else if (yil === 2) {
+                        masraf = (kredi * 0.01) / taksitPerYil; // %1
+                    } else if (yil === 3) {
+                        masraf = (kredi * 0.005) / taksitPerYil; // %0.5
+                    } else {
+                        masraf = 0; // 4. yıl ve sonrası
+                    }
+                } else if (vade === 36 && periyot === 3) {
+                    // 3 yıl vade ve 3 aylık periyot için özel oranlar
+                    if (yil === 1) {
+                        komisyon = (kredi * 0.01) / taksitPerYil; // %1
+                    } else if (yil === 2) {
+                        komisyon = (kredi * 0.00666668) / taksitPerYil; // %0.666668
+                    } else if (yil === 3) {
+                        komisyon = (kredi * 0.00333332) / taksitPerYil; // %0.333332
+                    } else {
+                        komisyon = 0; // 4. yıl ve sonrası
+                    }
+                    // Masraf hesaplama (3 yıl vade ve 3 aylık periyot için)
+                    if (yil === 1) {
+                        masraf = (kredi * 0) / taksitPerYil; // %0
+                    } else if (yil === 2) {
+                        masraf = (kredi * 0.01) / taksitPerYil; // %1
+                    } else if (yil === 3) {
+                        masraf = (kredi * 0.005) / taksitPerYil; // %0.5
+                    } else {
+                        masraf = 0; // 4. yıl ve sonrası
+                    }
+                } else if (vade === 48 && periyot === 3) {
+                    // 4 yıl vade ve 3 aylık periyot için özel oranlar
+                    if (yil === 1) {
+                        komisyon = (kredi * 0.01) / taksitPerYil; // %1
+                    } else if (yil === 2) {
+                        komisyon = (kredi * 0.0075) / taksitPerYil; // %0.75
+                    } else if (yil === 3) {
+                        komisyon = (kredi * 0.005) / taksitPerYil; // %0.5
+                    } else if (yil === 4) {
+                        komisyon = (kredi * 0.00375) / taksitPerYil; // %0.375
+                    } else {
+                        komisyon = 0; // 5. yıl ve sonrası
+                    }
+                    // Masraf hesaplama (4 yıl vade ve 3 aylık periyot için)
+                    if (yil === 1) {
+                        masraf = (kredi * 0) / taksitPerYil; // %0
+                    } else if (yil === 2) {
+                        masraf = (kredi * 0.01125) / taksitPerYil; // %1.125
+                    } else if (yil === 3) {
+                        masraf = (kredi * 0.0075) / taksitPerYil; // %0.75
+                    } else if (yil === 4) {
+                        masraf = (kredi * 0.00375) / taksitPerYil; // %0.375
+                    } else {
+                        masraf = 0; // 5. yıl ve sonrası
+                    }
+                } else {
+                    // Diğer durumlar için önceki oranlar
+                    if (yil === 1) {
+                        komisyon = kredi * 0.005; // %0.5
+                    } else if (yil === 2) {
+                        komisyon = kredi * 0.00375; // %0.375
+                    } else if (yil === 3) {
+                        komisyon = kredi * 0.0025; // %0.25
+                    } else if (yil === 4) {
+                        komisyon = kredi * 0.00125; // %0.125
+                    } else {
+                        komisyon = 0; // 5. yıl ve sonrası
+                    }
+                }
+                
+                kalanBorc -= anaparaOdeme;
+                if (kalanBorc < 0) kalanBorc = 0;
+                
+                toplamFaiz += faizTutari;
+                toplamKomisyon += komisyon;
+                toplamMasraf += masraf;
+                toplamOdeme += anaparaOdeme + faizTutari + komisyon + masraf;
+                
+                let satir = `<tr>
+                    <td>${i}. Taksit (${periyot} Aylık)</td>
+                    <td>${anaparaOdeme.toFixed(2)} TL</td>
+                    <td>${faizTutari.toFixed(2)} TL</td>
+                    <td>${masraf.toFixed(2)} TL</td>
+                    <td>${komisyon.toFixed(2)} TL</td>
+                    <td>${(anaparaOdeme + faizTutari + komisyon + masraf).toFixed(2)} TL</td>
+                    <td>${kalanBorc.toFixed(2)} TL</td>
+                </tr>`;
+                tablo.innerHTML += satir;
+            }
+            
+            document.getElementById("toplamFaiz").innerText = toplamFaiz.toFixed(2);
+            document.getElementById("toplamMasraf").innerText = toplamMasraf.toFixed(2);
+            document.getElementById("toplamKomisyon").innerText = toplamKomisyon.toFixed(2);
+            document.getElementById("toplamOdeme").innerText = toplamOdeme.toFixed(2);
+        }
+    </script>
+</body>
+</html>
